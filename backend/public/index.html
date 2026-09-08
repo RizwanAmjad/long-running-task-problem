@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Harbor Lending — Loan Desk</title>
+    <style>
+      :root {
+        --ink: #14213d;
+        --muted: #5c6b7a;
+        --line: #d7dee7;
+        --bg: #f3f6f9;
+        --card: #ffffff;
+        --accent: #0b6e4f;
+        --warn: #b08900;
+        --bad: #9b2226;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top right, #dce9e3 0%, transparent 40%),
+          var(--bg);
+        min-height: 100vh;
+      }
+
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 48px 20px 80px;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 1.75rem;
+        letter-spacing: -0.02em;
+      }
+
+      .sub {
+        margin: 0 0 28px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      form,
+      .result {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 22px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      label.full {
+        grid-column: 1 / -1;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        font: inherit;
+        color: var(--ink);
+        background: #fff;
+      }
+
+      button {
+        margin-top: 18px;
+        width: 100%;
+        border: 0;
+        border-radius: 8px;
+        padding: 12px 16px;
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        opacity: 0.65;
+        cursor: wait;
+      }
+
+      .hint {
+        margin-top: 12px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .result {
+        margin-top: 20px;
+        display: none;
+      }
+
+      .result.visible {
+        display: block;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .approve {
+        background: #d8f3e7;
+        color: var(--accent);
+      }
+
+      .approve_with_conditions {
+        background: #fff3cd;
+        color: var(--warn);
+      }
+
+      .decline {
+        background: #fde2e1;
+        color: var(--bad);
+      }
+
+      .meta {
+        margin-top: 14px;
+        display: grid;
+        gap: 8px;
+        font-size: 0.95rem;
+      }
+
+      .meta div {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 8px;
+      }
+
+      .meta span:last-child {
+        font-weight: 600;
+        text-align: right;
+      }
+
+      @media (max-width: 640px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Harbor Lending</h1>
+      <p class="sub">
+        Loan desk — submit a personal loan application. Harbor requests a hard
+        credit pull from ClearBureau before underwriting. That pull takes a
+        random 5–10 seconds, and today the desk waits on a single open HTTP
+        request.
+      </p>
+
+      <form id="app-form">
+        <div class="grid">
+          <label class="full">
+            Full name
+            <input name="fullName" value="Priya Shah" required />
+          </label>
+          <label>
+            SSN last 4
+            <input name="ssnLast4" value="7842" maxlength="4" required />
+          </label>
+          <label>
+            Date of birth
+            <input name="dateOfBirth" type="date" value="1991-04-18" required />
+          </label>
+          <label>
+            Annual income ($)
+            <input name="annualIncome" type="number" value="92000" min="1" required />
+          </label>
+          <label>
+            Amount requested ($)
+            <input name="amountRequested" type="number" value="15000" min="1" required />
+          </label>
+          <label class="full">
+            Purpose
+            <select name="purpose">
+              <option value="debt-consolidation">Debt consolidation</option>
+              <option value="home-improvement">Home improvement</option>
+              <option value="major-purchase">Major purchase</option>
+            </select>
+          </label>
+          <label>
+            Demo latency (ms, optional)
+            <input name="durationMs" type="number" min="0" placeholder="random 5000–10000" />
+          </label>
+        </div>
+        <button type="submit" id="submit-btn">Submit application</button>
+        <p class="hint">
+          Leave demo latency blank to use ClearBureau’s random 5–10s pull.
+        </p>
+      </form>
+
+      <section class="result" id="result" aria-live="polite"></section>
+    </main>
+
+    <script>
+      const form = document.getElementById("app-form");
+      const button = document.getElementById("submit-btn");
+      const result = document.getElementById("result");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const data = new FormData(form);
+
+        button.disabled = true;
+        button.textContent = "Waiting on ClearBureau…";
+        result.classList.remove("visible");
+
+        const started = performance.now();
+
+        try {
+          const durationRaw = data.get("durationMs");
+          const body = {
+            applicant: {
+              fullName: data.get("fullName"),
+              ssnLast4: data.get("ssnLast4"),
+              dateOfBirth: data.get("dateOfBirth"),
+              annualIncome: Number(data.get("annualIncome")),
+            },
+            amountRequested: Number(data.get("amountRequested")),
+            purpose: data.get("purpose"),
+          };
+          if (durationRaw !== null && String(durationRaw).trim() !== "") {
+            body.durationMs = Number(durationRaw);
+          }
+
+          const response = await fetch("/api/loan-applications", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+
+          const payload = await response.json();
+          const elapsed = Math.round(performance.now() - started);
+
+          if (!response.ok) {
+            result.innerHTML = `<strong>Request failed</strong><pre>${escapeHtml(
+              JSON.stringify(payload, null, 2),
+            )}</pre>`;
+          } else {
+            result.innerHTML = `
+              <span class="badge ${payload.decision}">${payload.decision.replaceAll("_", " ")}</span>
+              <p style="margin:12px 0 0">${escapeHtml(payload.reason)}</p>
+              <div class="meta">
+                <div><span>Application</span><span>${escapeHtml(payload.applicationId)}</span></div>
+                <div><span>Credit score</span><span>${payload.creditPull.creditScore}</span></div>
+                <div><span>APR</span><span>${payload.apr ?? "—"}</span></div>
+                <div><span>Bureau pull</span><span>${payload.creditPull.durationMs} ms</span></div>
+                <div><span>Desk waited</span><span>${elapsed} ms</span></div>
+              </div>
+            `;
+          }
+        } catch (error) {
+          result.innerHTML = `<strong>Network error</strong><p>${escapeHtml(
+            error.message,
+          )}</p>`;
+        } finally {
+          result.classList.add("visible");
+          button.disabled = false;
+          button.textContent = "Submit application";
+        }
+      });
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+    </script>
+  </body>
+</html>

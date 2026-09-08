@@ -1,0 +1,16 @@
+{
+  "name": "long-running-task-problem",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "third-party"
+  ],
+  "scripts": {
+    "start": "node init && concurrently -n clearbureau,harbor -c magenta,cyan \"npm run start -w clearbureau\" \"npm run start -w harbor-lending\"",
+    "start:harbor": "npm run start -w harbor-lending",
+    "start:clearbureau": "npm run start -w clearbureau"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
